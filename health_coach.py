@@ -79,10 +79,10 @@ class HealthCoach:
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini-2024-07-18",
             messages=[
-                {"role": "system", "content": "You are a professional fitness trainer."},
+                {"role": "system", "content": "You are a professional fitness trainer & Personal Trainer."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=500,
+            max_tokens=800,
             temperature=0.7
         )
 

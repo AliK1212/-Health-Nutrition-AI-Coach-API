@@ -26,7 +26,7 @@ An AI-powered health and nutrition coach that provides personalized meal plans, 
 ## Tech Stack
 
 - **Backend**: FastAPI
-- **AI Model**: Llama 2 (7B Chat)
+- **AI Model**: gpt-4o-mini
 - **Nutrition Data**: OpenFoodFacts API
 - **Containerization**: Docker
 - **Frontend**: React with TailwindCSS
