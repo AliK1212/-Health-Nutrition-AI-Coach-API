@@ -41,7 +41,7 @@ class HealthCoach:
             """
 
             response = openai.ChatCompletion.create(
-                model="gpt-4",
+                model="gpt-4o-mini-2024-07-18",
                 messages=[
                     {"role": "system", "content": "You are a professional nutritionist and meal planner."},
                     {"role": "user", "content": prompt}
@@ -77,7 +77,7 @@ class HealthCoach:
         prompt = self._create_workout_plan_prompt(profile_data)
         
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-4o-mini-2024-07-18",
             messages=[
                 {"role": "system", "content": "You are a professional fitness trainer."},
                 {"role": "user", "content": prompt}
