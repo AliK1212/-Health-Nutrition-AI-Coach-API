@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response as JSONResponse
 from models import HealthInput, MealPlan, WorkoutPlan, NutritionGoals
 from health_coach import HealthCoach
 import os
