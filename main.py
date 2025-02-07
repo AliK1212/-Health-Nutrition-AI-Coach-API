@@ -17,7 +17,7 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")],  # Frontend URL
+    allow_origins=["https://frontend-portfolio-aomn.onrender.com"],  # Only allow the frontend website
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,18 +25,18 @@ app.add_middleware(
 
 health_coach = HealthCoach()
 
-@app.options("/api/{path:path}")
+@app.options("/{path:path}")
 async def options_route(request: Request):
     return JSONResponse(
         content="OK",
         headers={
-            "Access-Control-Allow-Origin": "http://localhost:5173",
+            "Access-Control-Allow-Origin": "https://frontend-portfolio-aomn.onrender.com",
             "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type",
         }
     )
 
-@app.post("/api/meal-plan", response_model=MealPlan)
+@app.post("/meal-plan", response_model=MealPlan)
 async def generate_meal_plan(input_data: HealthInput):
     try:
         meal_plan = health_coach.generate_meal_plan(input_data.dict())
@@ -44,7 +44,7 @@ async def generate_meal_plan(input_data: HealthInput):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/api/analyze-meal")
+@app.post("/analyze-meal")
 async def analyze_meal(meal_data: dict):
     try:
         analysis = health_coach.analyze_nutritional_content(meal_data)
@@ -52,7 +52,7 @@ async def analyze_meal(meal_data: dict):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/api/workout-plan", response_model=WorkoutPlan)
+@app.post("/workout-plan", response_model=WorkoutPlan)
 async def generate_workout_plan(input_data: HealthInput):
     try:
         workout_plan = health_coach.generate_workout_plan(input_data.dict())
@@ -60,7 +60,7 @@ async def generate_workout_plan(input_data: HealthInput):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/api/nutrition-goals", response_model=NutritionGoals)
+@app.post("/nutrition-goals", response_model=NutritionGoals)
 async def get_nutrition_goals(input_data: HealthInput):
     try:
         goals = health_coach.get_nutrition_goals(input_data.dict())
