@@ -9,6 +9,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import logging
+import redis
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -17,8 +18,8 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 app = FastAPI(
-    title="Health & Nutrition Coach API",
-    description="AI-Powered Health and Nutrition Recommendations",
+    title="AI Health and Nutrition Coach",
+    description="AI-Powered Health and Nutrition Coaching",
     version="1.0.0"
 )
 
@@ -26,6 +27,14 @@ app = FastAPI(
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Initialize Redis
+redis_client = redis.Redis(
+    host=os.getenv("RENDER_REDIS_HOST", "localhost"),
+    port=int(os.getenv("RENDER_REDIS_PORT", 6379)),
+    password=os.getenv("RENDER_REDIS_PASSWORD", ""),
+    decode_responses=True
+)
 
 # Add CORS middleware
 origins = [
