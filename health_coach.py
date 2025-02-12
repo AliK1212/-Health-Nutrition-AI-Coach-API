@@ -9,10 +9,17 @@ class HealthCoach:
         openai.api_key = os.getenv("OPENAI_API_KEY")
         self.OPENFOODFACTS_URL = "https://world.openfoodfacts.org/api/v0/product/"
 
+    def _is_rest_day(self, exercises):
+        """Check if a day is a rest day by looking at its exercises."""
+        if not exercises:
+            return True
+        if len(exercises) == 1 and exercises[0].get('exercise', '').lower().startswith('rest'):
+            return True
+        return False
+
     def generate_meal_plan(self, input_data: dict) -> MealPlan:
         """Generate a personalized meal plan based on user preferences."""
         try:
-            # Create user profile section
             user_profile = f"""
             Age: {input_data.get('age')} years
             Weight: {input_data.get('weight')} kg
@@ -23,7 +30,6 @@ class HealthCoach:
             Meal Preferences: {', '.join(input_data.get('meal_preferences', []))}
             """
 
-            # Define the expected JSON structure with more detailed examples
             json_structure = """
             {
                 "meals": {
@@ -38,19 +44,12 @@ class HealthCoach:
                                 "fat": 6,
                                 "fiber": 8,
                                 "vitamins": ["B", "C", "D"]
-                            }
-                        },
-                        {
-                            "item": "Lunch: Grilled chicken salad",
-                            "portion": "6 oz chicken, 2 cups greens"
+                            },
+                            "preparation_time": 15,
+                            "difficulty_level": "easy",
+                            "alternatives": ["Whole grain toast with avocado", "Protein smoothie bowl"]
                         }
-                    ],
-                    "tuesday": [...],
-                    "wednesday": [...],
-                    "thursday": [...],
-                    "friday": [...],
-                    "saturday": [...],
-                    "sunday": [...]
+                    ]
                 },
                 "meal_timing": {
                     "breakfast": "7:00 AM",
@@ -75,20 +74,27 @@ class HealthCoach:
             }
             """
 
-            # Define requirements for daily meal planning
             requirements = """
-            For EACH DAY of the week, include:
+            For EACH DAY of the week (monday through sunday), include:
             1. 3 main meals (breakfast, lunch, dinner)
             2. 2-3 snacks
-            3. Exact portions in grams or standard measurements
-            4. Detailed nutritional information for each meal
-            5. Variety of proteins, carbs, and healthy fats
-            6. Consider dietary restrictions and preferences
-            7. Include alternatives for each main dish
-            8. Specify meal timing based on activity level
+            3. Each meal must include:
+               - Exact item name and description
+               - Precise portions
+               - Complete nutritional information (calories, protein, carbs, fat, fiber)
+               - Optional vitamins list
+               - Preparation time in minutes
+               - Difficulty level (easy, medium, hard)
+               - At least 2 alternatives
+            4. Meal timing for all meals
+            5. Comprehensive hydration guidelines
+            6. At least 3 preparation tips
+            7. At least 3 storage instructions
+            8. Accurate total nutritional values
+
+            IMPORTANT: Do not use [...] placeholders. Provide complete data for all 7 days.
             """
 
-            # Combine all parts into the final prompt
             prompt = f"""Generate a detailed, nutritionally balanced meal plan in JSON format for someone with the following profile:
 {user_profile}
 
@@ -110,8 +116,9 @@ IMPORTANT:
 1. You must ONLY return a valid JSON object. Do not include ANY explanatory text.
 2. Your entire response must be parseable as JSON.
 3. Include meals for ALL 7 days of the week.
-4. Each day must have at least 3 main meals and 2-3 snacks.
-5. Include detailed nutritional information for each meal."""
+4. Each meal must include all required fields (item, portion, nutrients, etc.).
+5. Include detailed nutritional information for each meal.
+6. DO NOT use [...] or placeholder values."""
                     },
                     {"role": "user", "content": prompt}
                 ],
@@ -124,7 +131,6 @@ IMPORTANT:
                 meal_plan_data = response.choices[0].message.content
                 if not isinstance(meal_plan_data, dict):
                     import json
-                    # Remove any non-JSON text that might be present
                     json_start = meal_plan_data.find('{')
                     json_end = meal_plan_data.rfind('}') + 1
                     if json_start >= 0 and json_end > json_start:
@@ -136,10 +142,25 @@ IMPORTANT:
                 if not all(field in meal_plan_data for field in required_fields):
                     raise ValueError("Missing required fields in meal plan data")
 
-                # Ensure all days of the week are present
+                # Validate meal structure
                 days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-                if not all(day in meal_plan_data['meals'] for day in days):
-                    raise ValueError("Missing days in meal plan data")
+                for day in days:
+                    if day not in meal_plan_data['meals']:
+                        raise ValueError(f"Missing {day} in meal plan data")
+                    meals = meal_plan_data['meals'][day]
+                    if not isinstance(meals, list) or len(meals) < 5:
+                        raise ValueError(f"Insufficient meals for {day}")
+                    
+                    # Validate each meal item
+                    for meal in meals:
+                        required_meal_fields = ['item', 'portion']
+                        if not all(field in meal for field in required_meal_fields):
+                            raise ValueError(f"Missing required fields in meal item for {day}")
+                        
+                        if 'nutrients' in meal:
+                            required_nutrient_fields = ['calories', 'protein', 'carbs', 'fat', 'fiber']
+                            if not all(field in meal['nutrients'] for field in required_nutrient_fields):
+                                raise ValueError(f"Missing required nutrient fields in meal item for {day}")
 
                 meal_plan = MealPlan(
                     meals=meal_plan_data["meals"],
@@ -168,7 +189,6 @@ IMPORTANT:
     def generate_workout_plan(self, profile_data: dict) -> WorkoutPlan:
         """Generate a comprehensive workout plan based on user profile."""
         try:
-            # Create user profile section
             user_profile = f"""
             Age: {profile_data.get('age')} years
             Weight: {profile_data.get('weight')} kg
@@ -177,7 +197,6 @@ IMPORTANT:
             Activity Level: {profile_data.get('activity_level')}
             """
 
-            # Define the expected JSON structure with detailed examples
             json_structure = """
             {
                 "weekly_schedule": {
@@ -186,71 +205,48 @@ IMPORTANT:
                             "exercise": "Barbell Squats",
                             "sets": "4 sets of 8-12 reps",
                             "duration": "15 min"
-                        },
-                        {
-                            "exercise": "Romanian Deadlifts",
-                            "sets": "3 sets of 10-12 reps",
-                            "duration": "15 min"
-                        },
-                        {
-                            "exercise": "Leg Press",
-                            "sets": "3 sets of 12-15 reps",
-                            "duration": "15 min"
-                        },
-                        {
-                            "exercise": "HIIT Cardio",
-                            "sets": "6 rounds",
-                            "duration": "20 min"
                         }
-                    ],
-                    "tuesday": [...],
-                    "wednesday": [...],
-                    "thursday": [...],
-                    "friday": [...],
-                    "saturday": [...],
-                    "sunday": [...]
+                    ]
                 },
                 "intensity_level": "High",
                 "estimated_calories_burn": 3000,
                 "warm_up": [
                     "5-10 minutes light cardio",
-                    "Dynamic stretching for major muscle groups",
-                    "Mobility work for joints"
+                    "Dynamic stretching for major muscle groups"
                 ],
                 "cool_down": [
                     "5 minutes light cardio",
-                    "Static stretching",
-                    "Foam rolling"
+                    "Static stretching"
                 ],
                 "safety_precautions": [
                     "Always warm up properly",
                     "Use proper form",
-                    "Start with lighter weights to warm up",
-                    "Have a spotter for heavy lifts"
+                    "Start with lighter weights"
                 ],
                 "progression_tips": [
                     "Increase weight by 5-10% when you can complete all sets",
-                    "Focus on form before increasing weight",
-                    "Rest 48 hours between training same muscle groups",
-                    "Track your progress in a workout log"
+                    "Focus on form before increasing weight"
                 ]
             }
             """
 
-            # Define requirements
             requirements = """
             For each training day:
-            1. Include 4-6 exercises targeting specific muscle groups
-            2. Mix of compound and isolation exercises
-            3. Specify sets, reps, and rest periods
+            1. Include 4-6 exercises for training days
+            2. Each exercise must include:
+               - Exercise name and description
+               - Sets and reps or duration
+               - Rest periods between sets
+            3. Mix of compound and isolation exercises
             4. Include both strength and cardio components
-            5. Progressive overload recommendations
-            6. Proper form descriptions
-            7. Alternative exercises for each movement
-            8. Rest day recommendations
+            5. Proper form descriptions
+            6. Rest days should be marked explicitly
+            7. Progressive overload recommendations
+            8. Comprehensive warm-up and cool-down routines
+
+            IMPORTANT: Do not use [...] placeholders. Provide complete workout data for all 7 days.
             """
 
-            # Combine all parts into the final prompt
             prompt = f"""Generate a detailed workout plan in JSON format for someone with the following profile:
 {user_profile}
 
@@ -272,9 +268,10 @@ IMPORTANT:
 1. You must ONLY return a valid JSON object. Do not include ANY explanatory text.
 2. Your entire response must be parseable as JSON.
 3. Include 4-6 exercises per training day.
-4. Each exercise must have detailed sets, reps, and duration.
+4. Each exercise must have detailed sets/reps and duration.
 5. Include both strength training and cardio components.
-6. Provide comprehensive warm-up and cool-down routines."""
+6. Provide comprehensive warm-up and cool-down routines.
+7. DO NOT use [...] placeholders in the JSON."""
                     },
                     {"role": "user", "content": prompt}
                 ],
@@ -287,7 +284,6 @@ IMPORTANT:
                 workout_data = response.choices[0].message.content
                 if not isinstance(workout_data, dict):
                     import json
-                    # Remove any non-JSON text that might be present
                     json_start = workout_data.find('{')
                     json_end = workout_data.rfind('}') + 1
                     if json_start >= 0 and json_end > json_start:
@@ -299,15 +295,22 @@ IMPORTANT:
                 if not all(field in workout_data for field in required_fields):
                     raise ValueError("Missing required fields in workout data")
 
-                # Ensure all days of the week are present
+                # Validate workout structure
                 days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
                 if not all(day in workout_data['weekly_schedule'] for day in days):
                     raise ValueError("Missing days in workout schedule")
 
-                # Ensure each training day has multiple exercises
+                # Validate exercises for each day
                 for day, exercises in workout_data['weekly_schedule'].items():
-                    if day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] and len(exercises) < 3:
-                        raise ValueError(f"Insufficient exercises for {day}")
+                    if not self._is_rest_day(exercises):
+                        if len(exercises) < 3:
+                            raise ValueError(f"Insufficient exercises for {day}")
+                        
+                        # Validate each exercise
+                        for exercise in exercises:
+                            required_exercise_fields = ['exercise']
+                            if not all(field in exercise for field in required_exercise_fields):
+                                raise ValueError(f"Missing required fields in exercise for {day}")
 
                 workout_plan = WorkoutPlan(
                     weekly_schedule=workout_data["weekly_schedule"],

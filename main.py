@@ -99,42 +99,76 @@ async def root(request: Request):
 @app.post("/meal-plan", response_model=MealPlan)
 @limiter.limit("10/minute")
 async def generate_meal_plan(request: Request, input_data: HealthInput):
+    """Generate a personalized meal plan based on user input."""
     try:
+        # Validate input data
+        if input_data.age <= 0 or input_data.weight <= 0 or input_data.height <= 0:
+            raise ValueError("Age, weight, and height must be positive numbers")
+        
+        # Generate meal plan
         meal_plan = health_coach.generate_meal_plan(input_data.dict())
         return meal_plan
+    except ValueError as e:
+        logger.error(f"Validation error in meal plan generation: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error generating meal plan: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error while generating meal plan")
 
 @app.post("/analyze-meal")
 @limiter.limit("10/minute")
 async def analyze_meal(request: Request, meal_data: dict):
+    """Analyze the nutritional content of a meal."""
     try:
+        if not meal_data or not isinstance(meal_data, dict):
+            raise ValueError("Invalid meal data format")
+        
         analysis = health_coach.analyze_nutritional_content(meal_data)
         return analysis
+    except ValueError as e:
+        logger.error(f"Validation error in meal analysis: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error analyzing meal: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error while analyzing meal")
 
 @app.post("/workout-plan", response_model=WorkoutPlan)
 @limiter.limit("10/minute")
 async def generate_workout_plan(request: Request, input_data: HealthInput):
+    """Generate a personalized workout plan based on user input."""
     try:
+        # Validate input data
+        if input_data.age <= 0 or input_data.weight <= 0 or input_data.height <= 0:
+            raise ValueError("Age, weight, and height must be positive numbers")
+        
+        # Generate workout plan
         workout_plan = health_coach.generate_workout_plan(input_data.dict())
         return workout_plan
+    except ValueError as e:
+        logger.error(f"Validation error in workout plan generation: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error generating workout plan: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error while generating workout plan")
 
 @app.post("/nutrition-goals", response_model=NutritionGoals)
 @limiter.limit("10/minute")
 async def get_nutrition_goals(request: Request, input_data: HealthInput):
+    """Calculate nutrition goals based on user input."""
     try:
+        # Validate input data
+        if input_data.age <= 0 or input_data.weight <= 0 or input_data.height <= 0:
+            raise ValueError("Age, weight, and height must be positive numbers")
+        
+        # Calculate nutrition goals
         goals = health_coach.get_nutrition_goals(input_data.dict())
         return goals
+    except ValueError as e:
+        logger.error(f"Validation error in nutrition goals calculation: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Error getting nutrition goals: {str(e)}")
-        raise HTTPException(status_code=404, detail=str(e))
+        logger.error(f"Error calculating nutrition goals: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error while calculating nutrition goals")
 
 if __name__ == "__main__":
     import uvicorn

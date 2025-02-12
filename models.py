@@ -1,60 +1,86 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, validator
 from typing import List, Optional, Dict, Union
 
 class Nutrients(BaseModel):
-    calories: float
-    protein: float
-    carbs: float
-    fat: float
-    fiber: float
+    calories: float = Field(..., ge=0)
+    protein: float = Field(..., ge=0)
+    carbs: float = Field(..., ge=0)
+    fat: float = Field(..., ge=0)
+    fiber: float = Field(..., ge=0)
     vitamins: Optional[List[str]] = None
 
 class MealItem(BaseModel):
-    item: str
-    portion: str
+    item: str = Field(..., min_length=1)
+    portion: str = Field(..., min_length=1)
     nutrients: Optional[Nutrients] = None
-    preparation_time: Optional[int] = None
-    difficulty_level: Optional[str] = None
+    preparation_time: Optional[int] = Field(None, ge=0)
+    difficulty_level: Optional[str] = Field(None, regex="^(easy|medium|hard)$")
     alternatives: Optional[List[str]] = None
+
+    @validator('alternatives')
+    def validate_alternatives(cls, v):
+        if v is not None and len(v) == 0:
+            raise ValueError("Alternatives list cannot be empty")
+        return v
 
 class MealPlan(BaseModel):
     meals: Dict[str, List[MealItem]]
     meal_timing: Optional[Dict[str, str]] = None
-    hydration_guidelines: Optional[str] = None
+    hydration_guidelines: Optional[str] = Field(None, min_length=1)
     preparation_tips: Optional[List[str]] = None
     storage_instructions: Optional[List[str]] = None
-    total_calories: float
-    total_protein: float
-    total_carbs: float
-    total_fat: float
-    total_fiber: float
+    total_calories: float = Field(..., ge=0)
+    total_protein: float = Field(..., ge=0)
+    total_carbs: float = Field(..., ge=0)
+    total_fat: float = Field(..., ge=0)
+    total_fiber: float = Field(..., ge=0)
+
+    @validator('meals')
+    def validate_meals(cls, v):
+        valid_days = {'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'}
+        if not all(day.lower() in valid_days for day in v.keys()):
+            raise ValueError("Invalid day in meal plan")
+        return v
 
 class Exercise(BaseModel):
-    exercise: str
-    sets: Optional[str] = None
-    duration: Optional[str] = None
+    exercise: str = Field(..., min_length=1)
+    sets: Optional[str] = Field(None, min_length=1)
+    duration: Optional[str] = Field(None, min_length=1)
 
 class WorkoutPlan(BaseModel):
     weekly_schedule: Dict[str, List[Exercise]]
-    intensity_level: str
-    estimated_calories_burn: float
+    intensity_level: str = Field(..., regex="^(low|medium|high)$")
+    estimated_calories_burn: float = Field(..., ge=0)
     warm_up: Optional[List[str]] = None
     cool_down: Optional[List[str]] = None
     safety_precautions: Optional[List[str]] = None
     progression_tips: Optional[List[str]] = None
 
+    @validator('weekly_schedule')
+    def validate_schedule(cls, v):
+        valid_days = {'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'}
+        if not all(day.lower() in valid_days for day in v.keys()):
+            raise ValueError("Invalid day in workout schedule")
+        return v
+
 class NutritionGoals(BaseModel):
-    calories: float
-    protein: float
-    carbs: float
-    fat: float
-    fiber: float
+    calories: float = Field(..., ge=0)
+    protein: float = Field(..., ge=0)
+    carbs: float = Field(..., ge=0)
+    fat: float = Field(..., ge=0)
+    fiber: float = Field(..., ge=0)
 
 class HealthInput(BaseModel):
-    age: int
-    weight: float
-    height: float
-    goals: List[str]
+    age: int = Field(..., gt=0, le=120)
+    weight: float = Field(..., gt=0, le=500)
+    height: float = Field(..., gt=0, le=300)
+    goals: List[str] = Field(..., min_items=1)
     dietary_restrictions: Optional[List[str]] = []
-    activity_level: str
+    activity_level: str = Field(..., regex="^(sedentary|light|moderate|very_active|extra_active)$")
     meal_preferences: Optional[List[str]] = []
+
+    @validator('goals')
+    def validate_goals(cls, v):
+        if not v:
+            raise ValueError("At least one goal must be specified")
+        return v
