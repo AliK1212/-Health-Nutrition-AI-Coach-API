@@ -76,6 +76,14 @@ app.add_middleware(
     max_age=3600,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 health_coach = HealthCoach()
 
 @app.options("/{path:path}")

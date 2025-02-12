@@ -1,16 +1,14 @@
 from typing import List, Dict
-import openai
 import os
+from openai import OpenAI
 import requests
 from models import MealPlan, WorkoutPlan, NutritionGoals
 from functools import lru_cache
-from fastapi_cache.decorator import cache
-from fastapi_cache import FastAPICache
-from fastapi_cache.backends.redis import RedisBackend
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class HealthCoach:
     def __init__(self):
-        openai.api_key = os.getenv("OPENAI_API_KEY")
         self.OPENFOODFACTS_URL = "https://world.openfoodfacts.org/api/v0/product/"
 
     def _is_rest_day(self, exercises):
@@ -110,12 +108,10 @@ Requirements:
 
 The response must be a valid JSON object that can be parsed directly."""
 
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[
-                    {
-                        "role": "system", 
-                        "content": """You are an expert nutritionist and meal planner. Generate evidence-based meal plans.
+            messages = [
+                {
+                    "role": "system", 
+                    "content": """You are an expert nutritionist and meal planner. Generate evidence-based meal plans.
 IMPORTANT: 
 1. You must ONLY return a valid JSON object. Do not include ANY explanatory text.
 2. Your entire response must be parseable as JSON.
@@ -125,12 +121,16 @@ IMPORTANT:
 6. Include detailed nutritional information for each meal.
 7. DO NOT use [...] or placeholder values.
 8. DO NOT skip any days - all seven days are required."""
-                    },
-                    {"role": "user", "content": prompt}
-                ],
+                },
+                {"role": "user", "content": prompt}
+            ]
+
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=messages,
                 max_tokens=5000,
                 temperature=0.7,
-                timeout=30
+                request_timeout=30
             )
 
             try:
@@ -192,7 +192,6 @@ IMPORTANT:
         except Exception as e:
             raise ValueError(f"Error generating meal plan: {str(e)}")
 
-    @cache(expire=300, key_builder=lambda func, *args, **kwargs: f"workout:{hash(frozenset(kwargs['profile_data'].items()))}")
     async def generate_workout_plan(self, profile_data: dict) -> WorkoutPlan:
         """Generate a comprehensive workout plan based on user profile."""
         try:
@@ -265,23 +264,25 @@ Requirements:
 
 The response must be a valid JSON object that can be parsed directly."""
 
-            response = openai.ChatCompletion.create(
-                model="gpt-4-turbo",  # Faster model
-                messages=[
-                    {
-                        "role": "system", 
-                        "content": """You are an expert fitness trainer. Generate concise workout plans.
+            messages = [
+                {
+                    "role": "system", 
+                    "content": """You are an expert fitness trainer. Generate concise workout plans.
 IMPORTANT:
 1. Intensity level must be lowercase: 'low', 'medium', or 'high'
 2. Rest days must be [{"exercise": "Rest"}]
 3. Maximum 3-5 exercises per day
 4. Use abbreviated formats: '4x8-12' instead of '4 sets of 8-12 reps'"""
-                    },
-                    {"role": "user", "content": prompt}
-                ],
+                },
+                {"role": "user", "content": prompt}
+            ]
+
+            response = client.chat.completions.create(
+                model="gpt-4-turbo",
+                messages=messages,
                 max_tokens=1200,
                 temperature=0.7,
-                timeout=15
+                request_timeout=15
             )
 
             try:
