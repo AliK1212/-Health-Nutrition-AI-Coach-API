@@ -23,40 +23,69 @@ class HealthCoach:
             Meal Preferences: {', '.join(input_data.get('meal_preferences', []))}
             """
 
-            # Define the expected JSON structure
+            # Define the expected JSON structure with more detailed examples
             json_structure = """
             {
                 "meals": {
-                    "breakfast": [{"item": "...", "portion": "..."}],
-                    "lunch": [{"item": "...", "portion": "..."}],
-                    "dinner": [{"item": "...", "portion": "..."}],
-                    "snacks": [{"item": "...", "portion": "..."}]
+                    "monday": [
+                        {
+                            "item": "Breakfast: Oatmeal with berries",
+                            "portion": "1 cup oats, 1/2 cup berries",
+                            "nutrients": {
+                                "calories": 300,
+                                "protein": 10,
+                                "carbs": 45,
+                                "fat": 6,
+                                "fiber": 8,
+                                "vitamins": ["B", "C", "D"]
+                            }
+                        },
+                        {
+                            "item": "Lunch: Grilled chicken salad",
+                            "portion": "6 oz chicken, 2 cups greens"
+                        }
+                    ],
+                    "tuesday": [...],
+                    "wednesday": [...],
+                    "thursday": [...],
+                    "friday": [...],
+                    "saturday": [...],
+                    "sunday": [...]
                 },
                 "meal_timing": {
-                    "breakfast": "...",
-                    "lunch": "...",
-                    "dinner": "...",
-                    "snacks": "..."
+                    "breakfast": "7:00 AM",
+                    "lunch": "12:30 PM",
+                    "dinner": "6:30 PM",
+                    "snacks": "10:00 AM, 3:30 PM"
                 },
-                "hydration_guidelines": "...",
-                "preparation_tips": ["...", "..."],
-                "storage_instructions": ["...", "..."],
-                "total_calories": 0,
-                "total_protein": 0,
-                "total_carbs": 0,
-                "total_fat": 0,
-                "total_fiber": 0
+                "hydration_guidelines": "Drink 8-10 glasses of water daily",
+                "preparation_tips": [
+                    "Meal prep on Sundays",
+                    "Store proteins separately"
+                ],
+                "storage_instructions": [
+                    "Keep prepared meals refrigerated",
+                    "Use airtight containers"
+                ],
+                "total_calories": 2500,
+                "total_protein": 180,
+                "total_carbs": 300,
+                "total_fat": 70,
+                "total_fiber": 35
             }
             """
 
-            # Define requirements
+            # Define requirements for daily meal planning
             requirements = """
-            For each meal item, include:
-            1. Exact portions in grams
-            2. Specific ingredients and brands when relevant
-            3. Alternative options considering dietary restrictions
-            4. Timing based on activity level and goals
-            5. Preparation and storage instructions
+            For EACH DAY of the week, include:
+            1. 3 main meals (breakfast, lunch, dinner)
+            2. 2-3 snacks
+            3. Exact portions in grams or standard measurements
+            4. Detailed nutritional information for each meal
+            5. Variety of proteins, carbs, and healthy fats
+            6. Consider dietary restrictions and preferences
+            7. Include alternatives for each main dish
+            8. Specify meal timing based on activity level
             """
 
             # Combine all parts into the final prompt
@@ -66,6 +95,7 @@ class HealthCoach:
 The response should be a valid JSON object with the following structure:
 {json_structure}
 
+Requirements:
 {requirements}
 
 The response must be a valid JSON object that can be parsed directly."""
@@ -76,8 +106,12 @@ The response must be a valid JSON object that can be parsed directly."""
                     {
                         "role": "system", 
                         "content": """You are an expert nutritionist and meal planner. Generate evidence-based meal plans.
-IMPORTANT: You must ONLY return a valid JSON object. Do not include ANY explanatory text.
-Your entire response must be parseable as JSON."""
+IMPORTANT: 
+1. You must ONLY return a valid JSON object. Do not include ANY explanatory text.
+2. Your entire response must be parseable as JSON.
+3. Include meals for ALL 7 days of the week.
+4. Each day must have at least 3 main meals and 2-3 snacks.
+5. Include detailed nutritional information for each meal."""
                     },
                     {"role": "user", "content": prompt}
                 ],
@@ -96,37 +130,40 @@ Your entire response must be parseable as JSON."""
                     if json_start >= 0 and json_end > json_start:
                         meal_plan_data = meal_plan_data[json_start:json_end]
                     meal_plan_data = json.loads(meal_plan_data)
-                
+
+                # Validate required fields
+                required_fields = ['meals', 'total_calories', 'total_protein', 'total_carbs', 'total_fat', 'total_fiber']
+                if not all(field in meal_plan_data for field in required_fields):
+                    raise ValueError("Missing required fields in meal plan data")
+
+                # Ensure all days of the week are present
+                days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+                if not all(day in meal_plan_data['meals'] for day in days):
+                    raise ValueError("Missing days in meal plan data")
+
                 meal_plan = MealPlan(
                     meals=meal_plan_data["meals"],
-                    meal_timing=meal_plan_data["meal_timing"],
-                    hydration_guidelines=meal_plan_data["hydration_guidelines"],
-                    preparation_tips=meal_plan_data["preparation_tips"],
-                    storage_instructions=meal_plan_data["storage_instructions"],
+                    meal_timing=meal_plan_data.get("meal_timing"),
+                    hydration_guidelines=meal_plan_data.get("hydration_guidelines"),
+                    preparation_tips=meal_plan_data.get("preparation_tips"),
+                    storage_instructions=meal_plan_data.get("storage_instructions"),
                     total_calories=meal_plan_data["total_calories"],
                     total_protein=meal_plan_data["total_protein"],
                     total_carbs=meal_plan_data["total_carbs"],
                     total_fat=meal_plan_data["total_fat"],
                     total_fiber=meal_plan_data["total_fiber"]
                 )
-                
-                # Enhance with nutritional analysis
-                for meal_type, meals in meal_plan.meals.items():
-                    for meal in meals:
-                        nutrients = self._get_food_nutrients(meal["item"])
-                        meal["nutrients"] = nutrients
-                        meal["preparation_time"] = self._estimate_prep_time(meal["item"])
-                        meal["difficulty_level"] = self._calculate_difficulty(meal["item"])
-                        
+
                 return meal_plan
 
             except Exception as e:
-                print(f"Error parsing meal plan response: {str(e)}")
+                import logging
+                logging.error(f"Error parsing meal plan: {str(e)}")
+                logging.error(f"Raw response: {meal_plan_data}")
                 raise ValueError("Failed to parse the meal plan response from the AI model")
 
         except Exception as e:
-            print(f"Error generating meal plan: {str(e)}")
-            raise
+            raise ValueError(f"Error generating meal plan: {str(e)}")
 
     def generate_workout_plan(self, profile_data: dict) -> WorkoutPlan:
         """Generate a comprehensive workout plan based on user profile."""
@@ -140,36 +177,77 @@ Your entire response must be parseable as JSON."""
             Activity Level: {profile_data.get('activity_level')}
             """
 
-            # Define the expected JSON structure
+            # Define the expected JSON structure with detailed examples
             json_structure = """
             {
                 "weekly_schedule": {
-                    "monday": [{"exercise": "...", "sets": "...", "duration": "..."}],
-                    "tuesday": [{"exercise": "...", "sets": "...", "duration": "..."}],
-                    "wednesday": [{"exercise": "...", "sets": "...", "duration": "..."}],
-                    "thursday": [{"exercise": "...", "sets": "...", "duration": "..."}],
-                    "friday": [{"exercise": "...", "sets": "...", "duration": "..."}],
-                    "saturday": [{"exercise": "...", "sets": "...", "duration": "..."}],
-                    "sunday": [{"exercise": "...", "sets": "...", "duration": "..."}]
+                    "monday": [
+                        {
+                            "exercise": "Barbell Squats",
+                            "sets": "4 sets of 8-12 reps",
+                            "duration": "15 min"
+                        },
+                        {
+                            "exercise": "Romanian Deadlifts",
+                            "sets": "3 sets of 10-12 reps",
+                            "duration": "15 min"
+                        },
+                        {
+                            "exercise": "Leg Press",
+                            "sets": "3 sets of 12-15 reps",
+                            "duration": "15 min"
+                        },
+                        {
+                            "exercise": "HIIT Cardio",
+                            "sets": "6 rounds",
+                            "duration": "20 min"
+                        }
+                    ],
+                    "tuesday": [...],
+                    "wednesday": [...],
+                    "thursday": [...],
+                    "friday": [...],
+                    "saturday": [...],
+                    "sunday": [...]
                 },
-                "intensity_level": "...",
-                "estimated_calories_burn": 0,
-                "warm_up": ["...", "..."],
-                "cool_down": ["...", "..."],
-                "safety_precautions": ["...", "..."],
-                "progression_tips": ["...", "..."]
+                "intensity_level": "High",
+                "estimated_calories_burn": 3000,
+                "warm_up": [
+                    "5-10 minutes light cardio",
+                    "Dynamic stretching for major muscle groups",
+                    "Mobility work for joints"
+                ],
+                "cool_down": [
+                    "5 minutes light cardio",
+                    "Static stretching",
+                    "Foam rolling"
+                ],
+                "safety_precautions": [
+                    "Always warm up properly",
+                    "Use proper form",
+                    "Start with lighter weights to warm up",
+                    "Have a spotter for heavy lifts"
+                ],
+                "progression_tips": [
+                    "Increase weight by 5-10% when you can complete all sets",
+                    "Focus on form before increasing weight",
+                    "Rest 48 hours between training same muscle groups",
+                    "Track your progress in a workout log"
+                ]
             }
             """
 
             # Define requirements
             requirements = """
-            Include for each exercise:
-            1. Proper form descriptions
-            2. Sets, reps, and rest periods
-            3. Alternative movements
-            4. Equipment needed
-            5. Target heart rate zones
-            6. Modifications for different fitness levels
+            For each training day:
+            1. Include 4-6 exercises targeting specific muscle groups
+            2. Mix of compound and isolation exercises
+            3. Specify sets, reps, and rest periods
+            4. Include both strength and cardio components
+            5. Progressive overload recommendations
+            6. Proper form descriptions
+            7. Alternative exercises for each movement
+            8. Rest day recommendations
             """
 
             # Combine all parts into the final prompt
@@ -179,6 +257,7 @@ Your entire response must be parseable as JSON."""
 The response should be a valid JSON object with the following structure:
 {json_structure}
 
+Requirements:
 {requirements}
 
 The response must be a valid JSON object that can be parsed directly."""
@@ -189,8 +268,13 @@ The response must be a valid JSON object that can be parsed directly."""
                     {
                         "role": "system", 
                         "content": """You are an expert fitness trainer. Generate evidence-based workout plans.
-IMPORTANT: You must ONLY return a valid JSON object. Do not include ANY explanatory text.
-Your entire response must be parseable as JSON."""
+IMPORTANT: 
+1. You must ONLY return a valid JSON object. Do not include ANY explanatory text.
+2. Your entire response must be parseable as JSON.
+3. Include 4-6 exercises per training day.
+4. Each exercise must have detailed sets, reps, and duration.
+5. Include both strength training and cardio components.
+6. Provide comprehensive warm-up and cool-down routines."""
                     },
                     {"role": "user", "content": prompt}
                 ],
@@ -209,26 +293,42 @@ Your entire response must be parseable as JSON."""
                     if json_start >= 0 and json_end > json_start:
                         workout_data = workout_data[json_start:json_end]
                     workout_data = json.loads(workout_data)
-                
+
+                # Validate required fields
+                required_fields = ['weekly_schedule', 'intensity_level', 'estimated_calories_burn']
+                if not all(field in workout_data for field in required_fields):
+                    raise ValueError("Missing required fields in workout data")
+
+                # Ensure all days of the week are present
+                days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+                if not all(day in workout_data['weekly_schedule'] for day in days):
+                    raise ValueError("Missing days in workout schedule")
+
+                # Ensure each training day has multiple exercises
+                for day, exercises in workout_data['weekly_schedule'].items():
+                    if day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] and len(exercises) < 3:
+                        raise ValueError(f"Insufficient exercises for {day}")
+
                 workout_plan = WorkoutPlan(
                     weekly_schedule=workout_data["weekly_schedule"],
                     intensity_level=workout_data["intensity_level"],
                     estimated_calories_burn=workout_data["estimated_calories_burn"],
-                    warm_up=workout_data.get("warm_up", []),
-                    cool_down=workout_data.get("cool_down", []),
-                    safety_precautions=workout_data.get("safety_precautions", []),
-                    progression_tips=workout_data.get("progression_tips", [])
+                    warm_up=workout_data.get("warm_up"),
+                    cool_down=workout_data.get("cool_down"),
+                    safety_precautions=workout_data.get("safety_precautions"),
+                    progression_tips=workout_data.get("progression_tips")
                 )
-                
+
                 return workout_plan
 
             except Exception as e:
-                print(f"Error parsing workout plan response: {str(e)}")
+                import logging
+                logging.error(f"Error parsing workout plan: {str(e)}")
+                logging.error(f"Raw response: {workout_data}")
                 raise ValueError("Failed to parse the workout plan response from the AI model")
 
         except Exception as e:
-            print(f"Error generating workout plan: {str(e)}")
-            raise
+            raise ValueError(f"Error generating workout plan: {str(e)}")
 
     def get_nutrition_goals(self, profile_data: dict) -> NutritionGoals:
         """Calculate comprehensive nutrition goals based on user profile."""
