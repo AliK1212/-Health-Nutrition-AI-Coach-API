@@ -13,7 +13,7 @@ class HealthCoach:
         """Generate a personalized meal plan based on user preferences."""
         try:
             # Create a comprehensive prompt with user preferences
-            prompt = f"""Create a detailed, nutritionally balanced meal plan for someone with the following profile:
+            prompt = f"""Generate a detailed, nutritionally balanced meal plan in JSON format for someone with the following profile:
             Age: {input_data.get('age')} years
             Weight: {input_data.get('weight')} kg
             Height: {input_data.get('height')} cm
@@ -22,51 +22,87 @@ class HealthCoach:
             Activity Level: {input_data.get('activity_level')}
             Meal Preferences: {', '.join(input_data.get('meal_preferences', []))}
 
-            For each meal (Breakfast, Lunch, Dinner, Snacks), provide:
-            1. Detailed ingredients with exact portions in grams
-            2. Preparation instructions
-            3. Nutritional breakdown per meal:
-               - Calories
-               - Protein (g)
-               - Carbs (g)
-               - Healthy Fats (g)
-               - Fiber (g)
-               - Key vitamins and minerals
-            4. Timing recommendations
-            5. Hydration guidelines
-            6. Alternative options for each meal
-            7. Meal prep tips
-            8. Storage instructions
+            The response should be a valid JSON object with the following structure:
+            {
+                "meals": {
+                    "breakfast": [{"item": "...", "portion": "..."}],
+                    "lunch": [{"item": "...", "portion": "..."}],
+                    "dinner": [{"item": "...", "portion": "..."}],
+                    "snacks": [{"item": "...", "portion": "..."}]
+                },
+                "meal_timing": {
+                    "breakfast": "...",
+                    "lunch": "...",
+                    "dinner": "...",
+                    "snacks": "..."
+                },
+                "hydration_guidelines": "...",
+                "preparation_tips": ["...", "..."],
+                "storage_instructions": ["...", "..."],
+                "total_calories": 0,
+                "total_protein": 0,
+                "total_carbs": 0,
+                "total_fat": 0,
+                "total_fiber": 0
+            }
 
-            Format the response in a clear, structured way that can be parsed into JSON.
-            Consider timing of meals around activity level and goals.
-            Include specific brands or alternatives for common ingredients.
-            Add notes about portion adjustments based on specific goals.
-            """
+            For each meal item, include:
+            1. Exact portions in grams
+            2. Specific ingredients and brands when relevant
+            3. Alternative options considering dietary restrictions
+            4. Timing based on activity level and goals
+            5. Preparation and storage instructions
+
+            The response must be a valid JSON object that can be parsed directly."""
 
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo-1106",
+                model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are an expert nutritionist and meal planner with deep knowledge of sports nutrition, dietary science, and meal timing. Provide evidence-based recommendations that are practical and easy to follow."},
+                    {
+                        "role": "system", 
+                        "content": "You are an expert nutritionist and meal planner. Generate evidence-based meal plans in valid JSON format only. Do not include any explanatory text outside the JSON structure."
+                    },
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=2000,
+                response_format={ "type": "json_object" },
+                max_tokens=4000,
                 temperature=0.7,
                 timeout=30
             )
 
             # Parse the response into a structured format
-            meal_plan = self._parse_meal_plan_response(response.choices[0].message.content)
-            
-            # Enhance with nutritional analysis
-            for meal_type, meals in meal_plan.meals.items():
-                for meal in meals:
-                    nutrients = self._get_food_nutrients(meal.item)
-                    meal.nutrients = nutrients
-                    meal.preparation_time = self._estimate_prep_time(meal.item)
-                    meal.difficulty_level = self._calculate_difficulty(meal.item)
+            try:
+                meal_plan_data = response.choices[0].message.content
+                if not isinstance(meal_plan_data, dict):
+                    import json
+                    meal_plan_data = json.loads(meal_plan_data)
+                
+                meal_plan = MealPlan(
+                    meals=meal_plan_data["meals"],
+                    meal_timing=meal_plan_data["meal_timing"],
+                    hydration_guidelines=meal_plan_data["hydration_guidelines"],
+                    preparation_tips=meal_plan_data["preparation_tips"],
+                    storage_instructions=meal_plan_data["storage_instructions"],
+                    total_calories=meal_plan_data["total_calories"],
+                    total_protein=meal_plan_data["total_protein"],
+                    total_carbs=meal_plan_data["total_carbs"],
+                    total_fat=meal_plan_data["total_fat"],
+                    total_fiber=meal_plan_data["total_fiber"]
+                )
+                
+                # Enhance with nutritional analysis
+                for meal_type, meals in meal_plan.meals.items():
+                    for meal in meals:
+                        nutrients = self._get_food_nutrients(meal["item"])
+                        meal["nutrients"] = nutrients
+                        meal["preparation_time"] = self._estimate_prep_time(meal["item"])
+                        meal["difficulty_level"] = self._calculate_difficulty(meal["item"])
+                        
+                return meal_plan
 
-            return meal_plan
+            except Exception as e:
+                print(f"Error parsing meal plan response: {str(e)}")
+                raise ValueError("Failed to parse the meal plan response from the AI model")
 
         except Exception as e:
             print(f"Error generating meal plan: {str(e)}")
@@ -74,57 +110,83 @@ class HealthCoach:
 
     def generate_workout_plan(self, profile_data: dict) -> WorkoutPlan:
         """Generate a comprehensive workout plan based on user profile."""
-        prompt = f"""Create a detailed, progressive workout plan for someone with the following profile:
-        Age: {profile_data.get('age')} years
-        Weight: {profile_data.get('weight')} kg
-        Height: {profile_data.get('height')} cm
-        Goals: {', '.join(profile_data.get('goals', []))}
-        Activity Level: {profile_data.get('activity_level')}
+        try:
+            prompt = f"""Generate a detailed workout plan in JSON format for someone with the following profile:
+            Age: {profile_data.get('age')} years
+            Weight: {profile_data.get('weight')} kg
+            Height: {profile_data.get('height')} cm
+            Goals: {', '.join(profile_data.get('goals', []))}
+            Activity Level: {profile_data.get('activity_level')}
 
-        Include for each workout:
-        1. Detailed exercise descriptions with proper form cues
-        2. Sets, reps, and rest periods
-        3. Progressive overload recommendations
-        4. Warm-up and cool-down routines
-        5. Alternative exercises for each movement
-        6. Required equipment
-        7. Estimated calorie burn
-        8. Target heart rate zones
-        9. Recovery recommendations
-        10. Performance tracking metrics
-        11. Safety precautions
-        12. Modifications for different fitness levels
+            The response should be a valid JSON object with the following structure:
+            {
+                "weekly_schedule": {
+                    "monday": [{"exercise": "...", "sets": "...", "duration": "..."}],
+                    "tuesday": [...],
+                    "wednesday": [...],
+                    "thursday": [...],
+                    "friday": [...],
+                    "saturday": [...],
+                    "sunday": [...]
+                },
+                "intensity_level": "...",
+                "estimated_calories_burn": 0,
+                "warm_up": ["...", "..."],
+                "cool_down": ["...", "..."],
+                "safety_precautions": ["...", "..."],
+                "progression_tips": ["...", "..."]
+            }
 
-        Provide a structured weekly schedule with:
-        - Detailed day-by-day breakdown
-        - Rest day recommendations
-        - Cardio integration
-        - Flexibility work
-        - Recovery protocols
-        """
-        
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo-1106",
-            messages=[
-                {"role": "system", "content": "You are an expert personal trainer and exercise physiologist with deep knowledge of biomechanics, exercise science, and progressive programming. Provide evidence-based recommendations that prioritize both results and safety."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=2000,
-            temperature=0.7,
-            timeout=30
-        )
+            Include for each exercise:
+            1. Proper form descriptions
+            2. Sets, reps, and rest periods
+            3. Alternative movements
+            4. Equipment needed
+            5. Target heart rate zones
+            6. Modifications for different fitness levels
 
-        workout_plan = self._parse_workout_plan_response(response.choices[0].message.content)
-        
-        # Enhance workout plan with additional details
-        for day, exercises in workout_plan.weekly_schedule.items():
-            for exercise in exercises:
-                exercise.muscle_groups = self._identify_muscle_groups(exercise.exercise)
-                exercise.equipment_needed = self._get_required_equipment(exercise.exercise)
-                exercise.difficulty = self._calculate_exercise_difficulty(exercise.exercise)
-                exercise.video_tutorial_link = self._get_exercise_tutorial(exercise.exercise)
+            The response must be a valid JSON object that can be parsed directly."""
 
-        return workout_plan
+            response = openai.ChatCompletion.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system", 
+                        "content": "You are an expert fitness trainer. Generate evidence-based workout plans in valid JSON format only. Do not include any explanatory text outside the JSON structure."
+                    },
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={ "type": "json_object" },
+                max_tokens=4000,
+                temperature=0.7,
+                timeout=30
+            )
+
+            try:
+                workout_data = response.choices[0].message.content
+                if not isinstance(workout_data, dict):
+                    import json
+                    workout_data = json.loads(workout_data)
+                
+                workout_plan = WorkoutPlan(
+                    weekly_schedule=workout_data["weekly_schedule"],
+                    intensity_level=workout_data["intensity_level"],
+                    estimated_calories_burn=workout_data["estimated_calories_burn"],
+                    warm_up=workout_data.get("warm_up", []),
+                    cool_down=workout_data.get("cool_down", []),
+                    safety_precautions=workout_data.get("safety_precautions", []),
+                    progression_tips=workout_data.get("progression_tips", [])
+                )
+                
+                return workout_plan
+
+            except Exception as e:
+                print(f"Error parsing workout plan response: {str(e)}")
+                raise ValueError("Failed to parse the workout plan response from the AI model")
+
+        except Exception as e:
+            print(f"Error generating workout plan: {str(e)}")
+            raise
 
     def get_nutrition_goals(self, profile_data: dict) -> NutritionGoals:
         """Calculate comprehensive nutrition goals based on user profile."""
