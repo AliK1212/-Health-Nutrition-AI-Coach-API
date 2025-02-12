@@ -68,6 +68,10 @@ class HealthCoach:
 
             return meal_plan
 
+        except Exception as e:
+            print(f"Error generating meal plan: {str(e)}")
+            raise
+
     def generate_workout_plan(self, profile_data: dict) -> WorkoutPlan:
         """Generate a comprehensive workout plan based on user profile."""
         prompt = f"""Create a detailed, progressive workout plan for someone with the following profile:
