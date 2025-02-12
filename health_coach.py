@@ -12,8 +12,8 @@ class HealthCoach:
     def generate_meal_plan(self, input_data: dict) -> MealPlan:
         """Generate a personalized meal plan based on user preferences."""
         try:
-            # Create a comprehensive prompt with user preferences
-            prompt = f"""Generate a detailed, nutritionally balanced meal plan in JSON format for someone with the following profile:
+            # Create user profile section
+            user_profile = f"""
             Age: {input_data.get('age')} years
             Weight: {input_data.get('weight')} kg
             Height: {input_data.get('height')} cm
@@ -21,8 +21,10 @@ class HealthCoach:
             Dietary Restrictions: {', '.join(input_data.get('dietary_restrictions', []))}
             Activity Level: {input_data.get('activity_level')}
             Meal Preferences: {', '.join(input_data.get('meal_preferences', []))}
+            """
 
-            The response should be a valid JSON object with the following structure:
+            # Define the expected JSON structure
+            json_structure = """
             {
                 "meals": {
                     "breakfast": [{"item": "...", "portion": "..."}],
@@ -45,18 +47,31 @@ class HealthCoach:
                 "total_fat": 0,
                 "total_fiber": 0
             }
+            """
 
+            # Define requirements
+            requirements = """
             For each meal item, include:
             1. Exact portions in grams
             2. Specific ingredients and brands when relevant
             3. Alternative options considering dietary restrictions
             4. Timing based on activity level and goals
             5. Preparation and storage instructions
+            """
 
-            The response must be a valid JSON object that can be parsed directly."""
+            # Combine all parts into the final prompt
+            prompt = f"""Generate a detailed, nutritionally balanced meal plan in JSON format for someone with the following profile:
+{user_profile}
+
+The response should be a valid JSON object with the following structure:
+{json_structure}
+
+{requirements}
+
+The response must be a valid JSON object that can be parsed directly."""
 
             response = openai.ChatCompletion.create(
-                model="gpt-4o-mini",
+                model="gpt-4",
                 messages=[
                     {
                         "role": "system", 
