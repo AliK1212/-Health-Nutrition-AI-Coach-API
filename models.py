@@ -65,7 +65,7 @@ class Exercise(BaseModel):
 
 class WorkoutPlan(BaseModel):
     weekly_schedule: Dict[str, List[Exercise]]
-    intensity_level: str = Field(..., pattern="^(low|medium|high)$")
+    intensity_level: str = Field(..., pattern="^(?i)low|medium|high$")
     estimated_calories_burn: float = Field(..., ge=0)
     warm_up: Optional[List[str]] = None
     cool_down: Optional[List[str]] = None
@@ -78,6 +78,10 @@ class WorkoutPlan(BaseModel):
         if not all(day.lower() in valid_days for day in v.keys()):
             raise ValueError("Invalid day in workout schedule")
         return v
+
+    @validator('intensity_level')
+    def normalize_intensity(cls, v):
+        return v.lower()
 
 class NutritionGoals(BaseModel):
     calories: float = Field(..., ge=0)

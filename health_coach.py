@@ -3,6 +3,7 @@ import openai
 import os
 import requests
 from models import MealPlan, WorkoutPlan, NutritionGoals
+from functools import lru_cache
 
 class HealthCoach:
     def __init__(self):
@@ -188,6 +189,7 @@ IMPORTANT:
         except Exception as e:
             raise ValueError(f"Error generating meal plan: {str(e)}")
 
+    @lru_cache(maxsize=128)
     def generate_workout_plan(self, profile_data: dict) -> WorkoutPlan:
         """Generate a comprehensive workout plan based on user profile."""
         try:
@@ -261,26 +263,22 @@ Requirements:
 The response must be a valid JSON object that can be parsed directly."""
 
             response = openai.ChatCompletion.create(
-                model="gpt-4",
+                model="gpt-4-turbo",  # Faster model
                 messages=[
                     {
                         "role": "system", 
-                        "content": """You are an expert fitness trainer. Generate evidence-based workout plans.
-IMPORTANT: 
-1. You must ONLY return a valid JSON object. Do not include ANY explanatory text.
-2. Your entire response must be parseable as JSON.
-3. You MUST include ALL 7 days of the week in the 'weekly_schedule' object.
-4. For rest days, use this exact format: [{"exercise": "Rest"}]
-5. DO NOT return rest days as strings - they must be arrays with a single exercise object.
-6. Each exercise must include required fields (exercise, sets/duration).
-7. DO NOT use [...] or placeholder values.
-8. Keep responses concise while maintaining all required information."""
+                        "content": """You are an expert fitness trainer. Generate concise workout plans.
+IMPORTANT:
+1. Intensity level must be lowercase: 'low', 'medium', or 'high'
+2. Rest days must be [{"exercise": "Rest"}]
+3. Maximum 3-5 exercises per day
+4. Use abbreviated formats: '4x8-12' instead of '4 sets of 8-12 reps'"""
                     },
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=2000,
+                max_tokens=1200,
                 temperature=0.7,
-                timeout=20
+                timeout=15
             )
 
             try:
