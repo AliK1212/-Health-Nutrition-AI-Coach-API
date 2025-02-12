@@ -75,21 +75,26 @@ The response must be a valid JSON object that can be parsed directly."""
                 messages=[
                     {
                         "role": "system", 
-                        "content": "You are an expert nutritionist and meal planner. Generate evidence-based meal plans in valid JSON format only. Do not include any explanatory text outside the JSON structure."
+                        "content": """You are an expert nutritionist and meal planner. Generate evidence-based meal plans.
+IMPORTANT: You must ONLY return a valid JSON object. Do not include ANY explanatory text.
+Your entire response must be parseable as JSON."""
                     },
                     {"role": "user", "content": prompt}
                 ],
-                response_format={ "type": "json_object" },
                 max_tokens=4000,
                 temperature=0.7,
                 timeout=30
             )
 
-            # Parse the response into a structured format
             try:
                 meal_plan_data = response.choices[0].message.content
                 if not isinstance(meal_plan_data, dict):
                     import json
+                    # Remove any non-JSON text that might be present
+                    json_start = meal_plan_data.find('{')
+                    json_end = meal_plan_data.rfind('}') + 1
+                    if json_start >= 0 and json_end > json_start:
+                        meal_plan_data = meal_plan_data[json_start:json_end]
                     meal_plan_data = json.loads(meal_plan_data)
                 
                 meal_plan = MealPlan(
@@ -183,11 +188,12 @@ The response must be a valid JSON object that can be parsed directly."""
                 messages=[
                     {
                         "role": "system", 
-                        "content": "You are an expert fitness trainer. Generate evidence-based workout plans in valid JSON format only. Do not include any explanatory text outside the JSON structure."
+                        "content": """You are an expert fitness trainer. Generate evidence-based workout plans.
+IMPORTANT: You must ONLY return a valid JSON object. Do not include ANY explanatory text.
+Your entire response must be parseable as JSON."""
                     },
                     {"role": "user", "content": prompt}
                 ],
-                response_format={ "type": "json_object" },
                 max_tokens=4000,
                 temperature=0.7,
                 timeout=30
@@ -197,6 +203,11 @@ The response must be a valid JSON object that can be parsed directly."""
                 workout_data = response.choices[0].message.content
                 if not isinstance(workout_data, dict):
                     import json
+                    # Remove any non-JSON text that might be present
+                    json_start = workout_data.find('{')
+                    json_end = workout_data.rfind('}') + 1
+                    if json_start >= 0 and json_end > json_start:
+                        workout_data = workout_data[json_start:json_end]
                     workout_data = json.loads(workout_data)
                 
                 workout_plan = WorkoutPlan(
