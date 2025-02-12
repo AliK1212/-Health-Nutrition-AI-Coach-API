@@ -57,6 +57,12 @@ class Exercise(BaseModel):
     sets: Optional[str] = Field(None, min_length=1)
     duration: Optional[str] = Field(None, min_length=1)
 
+    @validator('exercise')
+    def validate_exercise(cls, v):
+        if v.lower() == 'rest':
+            return v
+        return v
+
 class WorkoutPlan(BaseModel):
     weekly_schedule: Dict[str, List[Exercise]]
     intensity_level: str = Field(..., pattern="^(low|medium|high)$")

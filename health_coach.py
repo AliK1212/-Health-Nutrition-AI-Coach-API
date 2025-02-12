@@ -269,17 +269,18 @@ The response must be a valid JSON object that can be parsed directly."""
 IMPORTANT: 
 1. You must ONLY return a valid JSON object. Do not include ANY explanatory text.
 2. Your entire response must be parseable as JSON.
-3. Include 4-6 exercises per training day.
-4. Each exercise must have detailed sets/reps and duration.
-5. Include both strength training and cardio components.
-6. Provide comprehensive warm-up and cool-down routines.
-7. DO NOT use [...] placeholders in the JSON."""
+3. You MUST include ALL 7 days of the week in the 'weekly_schedule' object.
+4. For rest days, use this exact format: [{"exercise": "Rest"}]
+5. DO NOT return rest days as strings - they must be arrays with a single exercise object.
+6. Each exercise must include required fields (exercise, sets/duration).
+7. DO NOT use [...] or placeholder values.
+8. Keep responses concise while maintaining all required information."""
                     },
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=4000,
+                max_tokens=2000,
                 temperature=0.7,
-                timeout=30
+                timeout=20
             )
 
             try:
@@ -292,27 +293,40 @@ IMPORTANT:
                         workout_data = workout_data[json_start:json_end]
                     workout_data = json.loads(workout_data)
 
+                # Convert string rest days to proper format
+                for day, exercises in workout_data['weekly_schedule'].items():
+                    if isinstance(exercises, str) and exercises.lower() == 'rest':
+                        workout_data['weekly_schedule'][day] = [{"exercise": "Rest"}]
+                    elif not isinstance(exercises, list):
+                        raise ValueError(f"Invalid exercise data for {day}")
+
                 # Validate required fields
                 required_fields = ['weekly_schedule', 'intensity_level', 'estimated_calories_burn']
                 if not all(field in workout_data for field in required_fields):
-                    raise ValueError("Missing required fields in workout data")
+                    raise ValueError("Missing required fields in workout plan data")
 
-                # Validate workout structure
+                # Validate weekly schedule
                 days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-                if not all(day in workout_data['weekly_schedule'] for day in days):
-                    raise ValueError("Missing days in workout schedule")
-
-                # Validate exercises for each day
-                for day, exercises in workout_data['weekly_schedule'].items():
-                    if not self._is_rest_day(exercises):
-                        if len(exercises) < 3:
-                            raise ValueError(f"Insufficient exercises for {day}")
+                for day in days:
+                    if day not in workout_data['weekly_schedule']:
+                        raise ValueError(f"Missing {day} in workout schedule")
+                    
+                    exercises = workout_data['weekly_schedule'][day]
+                    if not isinstance(exercises, list):
+                        raise ValueError(f"Invalid exercise data for {day}")
+                    
+                    # Skip detailed validation for rest days
+                    if len(exercises) == 1 and exercises[0].get('exercise', '').lower() == 'rest':
+                        continue
                         
-                        # Validate each exercise
-                        for exercise in exercises:
-                            required_exercise_fields = ['exercise']
-                            if not all(field in exercise for field in required_exercise_fields):
-                                raise ValueError(f"Missing required fields in exercise for {day}")
+                    # Validate each exercise
+                    for exercise in exercises:
+                        if not isinstance(exercise, dict):
+                            raise ValueError(f"Invalid exercise format in {day}")
+                        if 'exercise' not in exercise:
+                            raise ValueError(f"Missing exercise name in {day}")
+                        if exercise['exercise'].lower() != 'rest' and not any(k in exercise for k in ['sets', 'duration']):
+                            raise ValueError(f"Exercise must have either sets or duration in {day}")
 
                 workout_plan = WorkoutPlan(
                     weekly_schedule=workout_data["weekly_schedule"],
