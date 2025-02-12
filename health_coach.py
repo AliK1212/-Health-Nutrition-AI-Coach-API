@@ -126,23 +126,26 @@ The response must be a valid JSON object that can be parsed directly."""
     def generate_workout_plan(self, profile_data: dict) -> WorkoutPlan:
         """Generate a comprehensive workout plan based on user profile."""
         try:
-            prompt = f"""Generate a detailed workout plan in JSON format for someone with the following profile:
+            # Create user profile section
+            user_profile = f"""
             Age: {profile_data.get('age')} years
             Weight: {profile_data.get('weight')} kg
             Height: {profile_data.get('height')} cm
             Goals: {', '.join(profile_data.get('goals', []))}
             Activity Level: {profile_data.get('activity_level')}
+            """
 
-            The response should be a valid JSON object with the following structure:
+            # Define the expected JSON structure
+            json_structure = """
             {
                 "weekly_schedule": {
                     "monday": [{"exercise": "...", "sets": "...", "duration": "..."}],
-                    "tuesday": [...],
-                    "wednesday": [...],
-                    "thursday": [...],
-                    "friday": [...],
-                    "saturday": [...],
-                    "sunday": [...]
+                    "tuesday": [{"exercise": "...", "sets": "...", "duration": "..."}],
+                    "wednesday": [{"exercise": "...", "sets": "...", "duration": "..."}],
+                    "thursday": [{"exercise": "...", "sets": "...", "duration": "..."}],
+                    "friday": [{"exercise": "...", "sets": "...", "duration": "..."}],
+                    "saturday": [{"exercise": "...", "sets": "...", "duration": "..."}],
+                    "sunday": [{"exercise": "...", "sets": "...", "duration": "..."}]
                 },
                 "intensity_level": "...",
                 "estimated_calories_burn": 0,
@@ -151,7 +154,10 @@ The response must be a valid JSON object that can be parsed directly."""
                 "safety_precautions": ["...", "..."],
                 "progression_tips": ["...", "..."]
             }
+            """
 
+            # Define requirements
+            requirements = """
             Include for each exercise:
             1. Proper form descriptions
             2. Sets, reps, and rest periods
@@ -159,11 +165,21 @@ The response must be a valid JSON object that can be parsed directly."""
             4. Equipment needed
             5. Target heart rate zones
             6. Modifications for different fitness levels
+            """
 
-            The response must be a valid JSON object that can be parsed directly."""
+            # Combine all parts into the final prompt
+            prompt = f"""Generate a detailed workout plan in JSON format for someone with the following profile:
+{user_profile}
+
+The response should be a valid JSON object with the following structure:
+{json_structure}
+
+{requirements}
+
+The response must be a valid JSON object that can be parsed directly."""
 
             response = openai.ChatCompletion.create(
-                model="gpt-4o-mini",
+                model="gpt-4",
                 messages=[
                     {
                         "role": "system", 
@@ -371,16 +387,45 @@ The response must be a valid JSON object that can be parsed directly."""
         )
 
     def _create_workout_plan_prompt(self, profile: dict) -> str:
+        """Create a prompt for workout plan generation."""
+        # Create user profile section
+        user_profile = f"""
+        Age: {profile.get('age')} years
+        Weight: {profile.get('weight')} kg
+        Height: {profile.get('height')} cm
+        Goals: {', '.join(profile.get('goals', []))}
+        Activity Level: {profile.get('activity_level')}
+        """
+
+        # Define the expected JSON structure
+        json_structure = """
+        {
+            "weekly_schedule": {
+                "monday": [{"exercise": "...", "sets": "...", "duration": "..."}],
+                "tuesday": [{"exercise": "...", "sets": "...", "duration": "..."}],
+                "wednesday": [{"exercise": "...", "sets": "...", "duration": "..."}],
+                "thursday": [{"exercise": "...", "sets": "...", "duration": "..."}],
+                "friday": [{"exercise": "...", "sets": "...", "duration": "..."}],
+                "saturday": [{"exercise": "...", "sets": "...", "duration": "..."}],
+                "sunday": [{"exercise": "...", "sets": "...", "duration": "..."}]
+            },
+            "intensity_level": "...",
+            "estimated_calories_burn": 0,
+            "warm_up": ["...", "..."],
+            "cool_down": ["...", "..."],
+            "safety_precautions": ["...", "..."],
+            "progression_tips": ["...", "..."]
+        }
+        """
+
+        # Combine all parts into the final prompt
         return f"""Create a workout plan for a person with the following profile:
-        Age: {profile['age']}
-        Weight: {profile['weight']}kg
-        Height: {profile['height']}cm
-        Goals: {', '.join(profile['goals'])}
-        Activity level: {profile['activity_level']}
-        
-        Generate a weekly workout plan with specific exercises, sets, reps, and rest periods.
-        Include both cardio and strength training components.
-        END"""
+{user_profile}
+
+The response should be a valid JSON object with the following structure:
+{json_structure}
+
+The response must be a valid JSON object that can be parsed directly."""
 
     def _parse_meal_plan_response(self, response_text: str) -> MealPlan:
         # Parse the AI response into a structured meal plan
