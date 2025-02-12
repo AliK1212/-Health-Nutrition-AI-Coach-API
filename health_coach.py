@@ -130,7 +130,7 @@ IMPORTANT:
                 messages=messages,
                 max_tokens=5000,
                 temperature=0.7,
-                request_timeout=30
+                timeout=30
             )
 
             try:
@@ -282,7 +282,7 @@ IMPORTANT:
                 messages=messages,
                 max_tokens=1200,
                 temperature=0.7,
-                request_timeout=15
+                timeout=15
             )
 
             try:
