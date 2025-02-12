@@ -126,11 +126,12 @@ IMPORTANT:
             ]
 
             response = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-3.5-turbo-1106",  # Using the latest GPT-3.5 model for faster responses
                 messages=messages,
-                max_tokens=5000,
+                max_tokens=4000,
                 temperature=0.7,
-                timeout=30
+                timeout=60,  # Reduced timeout since GPT-3.5 is faster
+                response_format={ "type": "json" }  # Ensure JSON response
             )
 
             try:
@@ -278,11 +279,12 @@ IMPORTANT:
             ]
 
             response = client.chat.completions.create(
-                model="gpt-4-turbo",
+                model="gpt-3.5-turbo-1106",  # Using the latest GPT-3.5 model for faster responses
                 messages=messages,
-                max_tokens=1200,
+                max_tokens=2000,
                 temperature=0.7,
-                timeout=15
+                timeout=60,  # Reduced timeout since GPT-3.5 is faster
+                response_format={ "type": "json" }  # Ensure JSON response
             )
 
             try:
