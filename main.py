@@ -134,22 +134,16 @@ async def analyze_meal(request: Request, meal_data: dict):
 
 @app.post("/workout-plan", response_model=WorkoutPlan)
 @limiter.limit("10/minute")
-async def generate_workout_plan(request: Request, input_data: HealthInput):
-    """Generate a personalized workout plan based on user input."""
+async def get_workout_plan(request: Request, input_data: HealthInput):
     try:
-        # Validate input data
-        if input_data.age <= 0 or input_data.weight <= 0 or input_data.height <= 0:
-            raise ValueError("Age, weight, and height must be positive numbers")
-        
-        # Generate workout plan
-        workout_plan = health_coach.generate_workout_plan(input_data.dict())
-        return workout_plan
-    except ValueError as e:
-        logger.error(f"Validation error in workout plan generation: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        coach = HealthCoach()
+        return await coach.generate_workout_plan(input_data.dict())
     except Exception as e:
-        logger.error(f"Error generating workout plan: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error while generating workout plan")
+        logger.error(f"Workout plan error: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Workout plan generation failed: {str(e)}"}
+        )
 
 @app.post("/nutrition-goals", response_model=NutritionGoals)
 @limiter.limit("10/minute")

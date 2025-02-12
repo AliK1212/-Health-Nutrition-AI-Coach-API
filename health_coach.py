@@ -4,6 +4,9 @@ import os
 import requests
 from models import MealPlan, WorkoutPlan, NutritionGoals
 from functools import lru_cache
+from fastapi_cache.decorator import cache
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
 
 class HealthCoach:
     def __init__(self):
@@ -189,8 +192,8 @@ IMPORTANT:
         except Exception as e:
             raise ValueError(f"Error generating meal plan: {str(e)}")
 
-    @lru_cache(maxsize=128)
-    def generate_workout_plan(self, profile_data: dict) -> WorkoutPlan:
+    @cache(expire=300, key_builder=lambda func, *args, **kwargs: f"workout:{hash(frozenset(kwargs['profile_data'].items()))}")
+    async def generate_workout_plan(self, profile_data: dict) -> WorkoutPlan:
         """Generate a comprehensive workout plan based on user profile."""
         try:
             user_profile = f"""
