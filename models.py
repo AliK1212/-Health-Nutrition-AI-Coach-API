@@ -14,7 +14,7 @@ class MealItem(BaseModel):
     portion: str = Field(..., min_length=1)
     nutrients: Optional[Nutrients] = None
     preparation_time: Optional[int] = Field(None, ge=0)
-    difficulty_level: Optional[str] = Field(None, regex="^(easy|medium|hard)$")
+    difficulty_level: Optional[str] = Field(None, pattern="^(easy|medium|hard)$")
     alternatives: Optional[List[str]] = None
 
     @validator('alternatives')
@@ -49,7 +49,7 @@ class Exercise(BaseModel):
 
 class WorkoutPlan(BaseModel):
     weekly_schedule: Dict[str, List[Exercise]]
-    intensity_level: str = Field(..., regex="^(low|medium|high)$")
+    intensity_level: str = Field(..., pattern="^(low|medium|high)$")
     estimated_calories_burn: float = Field(..., ge=0)
     warm_up: Optional[List[str]] = None
     cool_down: Optional[List[str]] = None
@@ -76,7 +76,7 @@ class HealthInput(BaseModel):
     height: float = Field(..., gt=0, le=300)
     goals: List[str] = Field(..., min_items=1)
     dietary_restrictions: Optional[List[str]] = []
-    activity_level: str = Field(..., regex="^(sedentary|light|moderate|very_active|extra_active)$")
+    activity_level: str = Field(..., pattern="^(sedentary|light|moderate|very_active|extra_active)$")
     meal_preferences: Optional[List[str]] = []
 
     @validator('goals')
