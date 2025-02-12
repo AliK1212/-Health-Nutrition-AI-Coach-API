@@ -41,13 +41,14 @@ class HealthCoach:
             """
 
             response = openai.ChatCompletion.create(
-                model="gpt-4o-mini-2024-07-18",
+                model="gpt-3.5-turbo-1106",  # Latest stable version of GPT-3.5 Turbo
                 messages=[
                     {"role": "system", "content": "You are a professional nutritionist and meal planner."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=1000,
-                temperature=0.7
+                temperature=0.7,
+                timeout=30
             )
 
             # Parse the response
@@ -77,13 +78,14 @@ class HealthCoach:
         prompt = self._create_workout_plan_prompt(profile_data)
         
         response = openai.ChatCompletion.create(
-            model="gpt-4o-mini-2024-07-18",
+            model="gpt-3.5-turbo-1106",  # Latest stable version of GPT-3.5 Turbo
             messages=[
                 {"role": "system", "content": "You are a professional fitness trainer & Personal Trainer."},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=800,
-            temperature=0.7
+            temperature=0.7,
+            timeout=30
         )
 
         return self._parse_workout_plan_response(response.choices[0].message.content)
