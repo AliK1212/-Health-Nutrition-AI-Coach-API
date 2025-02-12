@@ -12,8 +12,8 @@ class HealthCoach:
     def generate_meal_plan(self, input_data: dict) -> MealPlan:
         """Generate a personalized meal plan based on user preferences."""
         try:
-            # Create a prompt with user preferences
-            prompt = f"""Create a detailed meal plan for someone with the following characteristics:
+            # Create a comprehensive prompt with user preferences
+            prompt = f"""Create a detailed, nutritionally balanced meal plan for someone with the following profile:
             Age: {input_data.get('age')} years
             Weight: {input_data.get('weight')} kg
             Height: {input_data.get('height')} cm
@@ -22,76 +22,211 @@ class HealthCoach:
             Activity Level: {input_data.get('activity_level')}
             Meal Preferences: {', '.join(input_data.get('meal_preferences', []))}
 
-            Please provide a detailed meal plan with the following structure:
+            For each meal (Breakfast, Lunch, Dinner, Snacks), provide:
+            1. Detailed ingredients with exact portions in grams
+            2. Preparation instructions
+            3. Nutritional breakdown per meal:
+               - Calories
+               - Protein (g)
+               - Carbs (g)
+               - Healthy Fats (g)
+               - Fiber (g)
+               - Key vitamins and minerals
+            4. Timing recommendations
+            5. Hydration guidelines
+            6. Alternative options for each meal
+            7. Meal prep tips
+            8. Storage instructions
 
-            Breakfast:
-            [List breakfast items]
-
-            Lunch:
-            [List lunch items]
-
-            Dinner:
-            [List dinner items]
-
-            Snacks:
-            [List snack items]
-
-            Make sure to consider any dietary restrictions and preferences.
-            If Halal is specified in dietary restrictions, ensure all meals are Halal-compliant.
+            Format the response in a clear, structured way that can be parsed into JSON.
+            Consider timing of meals around activity level and goals.
+            Include specific brands or alternatives for common ingredients.
+            Add notes about portion adjustments based on specific goals.
             """
 
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo-1106",  # Latest stable version of GPT-3.5 Turbo
+                model="gpt-3.5-turbo-1106",
                 messages=[
-                    {"role": "system", "content": "You are a professional nutritionist and meal planner."},
+                    {"role": "system", "content": "You are an expert nutritionist and meal planner with deep knowledge of sports nutrition, dietary science, and meal timing. Provide evidence-based recommendations that are practical and easy to follow."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=1000,
+                max_tokens=2000,
                 temperature=0.7,
                 timeout=30
             )
 
-            # Parse the response
+            # Parse the response into a structured format
             meal_plan = self._parse_meal_plan_response(response.choices[0].message.content)
+            
+            # Enhance with nutritional analysis
+            for meal_type, meals in meal_plan.meals.items():
+                for meal in meals:
+                    nutrients = self._get_food_nutrients(meal.item)
+                    meal.nutrients = nutrients
+                    meal.preparation_time = self._estimate_prep_time(meal.item)
+                    meal.difficulty_level = self._calculate_difficulty(meal.item)
+
             return meal_plan
-        except Exception as e:
-            print(f"Error generating meal plan: {str(e)}")
-            raise e
-
-    def analyze_nutritional_content(self, meal_data: dict) -> dict:
-        total_nutrients = {
-            "calories": 0,
-            "protein": 0,
-            "carbs": 0,
-            "fat": 0,
-            "fiber": 0
-        }
-
-        for food_item in meal_data.get("items", []):
-            nutrients = self._get_food_nutrients(food_item)
-            for key in total_nutrients:
-                total_nutrients[key] += nutrients.get(key, 0)
-
-        return total_nutrients
 
     def generate_workout_plan(self, profile_data: dict) -> WorkoutPlan:
-        prompt = self._create_workout_plan_prompt(profile_data)
+        """Generate a comprehensive workout plan based on user profile."""
+        prompt = f"""Create a detailed, progressive workout plan for someone with the following profile:
+        Age: {profile_data.get('age')} years
+        Weight: {profile_data.get('weight')} kg
+        Height: {profile_data.get('height')} cm
+        Goals: {', '.join(profile_data.get('goals', []))}
+        Activity Level: {profile_data.get('activity_level')}
+
+        Include for each workout:
+        1. Detailed exercise descriptions with proper form cues
+        2. Sets, reps, and rest periods
+        3. Progressive overload recommendations
+        4. Warm-up and cool-down routines
+        5. Alternative exercises for each movement
+        6. Required equipment
+        7. Estimated calorie burn
+        8. Target heart rate zones
+        9. Recovery recommendations
+        10. Performance tracking metrics
+        11. Safety precautions
+        12. Modifications for different fitness levels
+
+        Provide a structured weekly schedule with:
+        - Detailed day-by-day breakdown
+        - Rest day recommendations
+        - Cardio integration
+        - Flexibility work
+        - Recovery protocols
+        """
         
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo-1106",  # Latest stable version of GPT-3.5 Turbo
+            model="gpt-3.5-turbo-1106",
             messages=[
-                {"role": "system", "content": "You are a professional fitness trainer & Personal Trainer."},
+                {"role": "system", "content": "You are an expert personal trainer and exercise physiologist with deep knowledge of biomechanics, exercise science, and progressive programming. Provide evidence-based recommendations that prioritize both results and safety."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=800,
+            max_tokens=2000,
             temperature=0.7,
             timeout=30
         )
 
-        return self._parse_workout_plan_response(response.choices[0].message.content)
+        workout_plan = self._parse_workout_plan_response(response.choices[0].message.content)
+        
+        # Enhance workout plan with additional details
+        for day, exercises in workout_plan.weekly_schedule.items():
+            for exercise in exercises:
+                exercise.muscle_groups = self._identify_muscle_groups(exercise.exercise)
+                exercise.equipment_needed = self._get_required_equipment(exercise.exercise)
+                exercise.difficulty = self._calculate_exercise_difficulty(exercise.exercise)
+                exercise.video_tutorial_link = self._get_exercise_tutorial(exercise.exercise)
+
+        return workout_plan
 
     def get_nutrition_goals(self, profile_data: dict) -> NutritionGoals:
-        return self._calculate_nutrition_goals(profile_data)
+        """Calculate comprehensive nutrition goals based on user profile."""
+        # Calculate base metabolic rate using Mifflin-St Jeor Equation
+        age = int(profile_data.get('age', 0))
+        weight = float(profile_data.get('weight', 0))
+        height = float(profile_data.get('height', 0))
+        activity_level = profile_data.get('activity_level', 'moderate')
+        goals = profile_data.get('goals', [])
+
+        # Calculate BMR
+        bmr = (10 * weight) + (6.25 * height) - (5 * age)
+
+        # Activity level multipliers
+        activity_multipliers = {
+            'sedentary': 1.2,
+            'light': 1.375,
+            'moderate': 1.55,
+            'active': 1.725,
+            'very_active': 1.9
+        }
+
+        # Calculate TDEE (Total Daily Energy Expenditure)
+        tdee = bmr * activity_multipliers.get(activity_level, 1.55)
+
+        # Adjust calories based on goals
+        calorie_adjustment = 0
+        if 'weight_loss' in goals:
+            calorie_adjustment = -500  # Create a deficit
+        elif 'muscle_gain' in goals:
+            calorie_adjustment = 300   # Create a surplus
+
+        final_calories = tdee + calorie_adjustment
+
+        # Calculate macronutrient ratios based on goals
+        protein_ratio = 0.3  # 30% of calories from protein
+        fat_ratio = 0.25     # 25% of calories from fat
+        carb_ratio = 0.45    # 45% of calories from carbs
+
+        if 'muscle_gain' in goals:
+            protein_ratio = 0.35
+            carb_ratio = 0.45
+            fat_ratio = 0.20
+        elif 'weight_loss' in goals:
+            protein_ratio = 0.40
+            fat_ratio = 0.30
+            carb_ratio = 0.30
+
+        # Calculate macros in grams
+        protein = (final_calories * protein_ratio) / 4  # 4 calories per gram of protein
+        carbs = (final_calories * carb_ratio) / 4      # 4 calories per gram of carbs
+        fat = (final_calories * fat_ratio) / 9         # 9 calories per gram of fat
+        fiber = weight * 0.5  # 0.5g fiber per kg of body weight
+
+        return NutritionGoals(
+            calories=round(final_calories),
+            protein=round(protein),
+            carbs=round(carbs),
+            fat=round(fat),
+            fiber=round(fiber),
+            hydration=round(weight * 0.033, 1),  # 33ml per kg of body weight
+            meal_timing={
+                'breakfast': '15-25% of daily calories',
+                'lunch': '25-35% of daily calories',
+                'dinner': '25-35% of daily calories',
+                'snacks': '15-25% of daily calories'
+            },
+            micronutrient_focus=[
+                'Vitamin D',
+                'Omega-3 fatty acids',
+                'Iron',
+                'Calcium',
+                'Magnesium',
+                'Zinc'
+            ],
+            supplements_recommended=self._get_supplement_recommendations(goals)
+        )
+
+    def _get_supplement_recommendations(self, goals: List[str]) -> List[dict]:
+        """Get personalized supplement recommendations based on goals."""
+        base_supplements = [
+            {
+                'name': 'Multivitamin',
+                'dosage': '1 tablet',
+                'timing': 'With breakfast',
+                'purpose': 'Fill potential micronutrient gaps'
+            }
+        ]
+
+        if 'muscle_gain' in goals:
+            base_supplements.extend([
+                {
+                    'name': 'Creatine Monohydrate',
+                    'dosage': '5g daily',
+                    'timing': 'Any time',
+                    'purpose': 'Improve strength and muscle gains'
+                },
+                {
+                    'name': 'Whey Protein',
+                    'dosage': '25-30g',
+                    'timing': 'Post-workout',
+                    'purpose': 'Support muscle recovery and growth'
+                }
+            ])
+
+        return base_supplements
 
     def _get_food_nutrients(self, food_item: str) -> dict:
         """Fetch nutrition data from OpenFoodFacts API"""
@@ -247,3 +382,27 @@ class HealthCoach:
             intensity_level="moderate",
             estimated_calories_burn=500.0
         )
+
+    def _estimate_prep_time(self, meal_item: str) -> int:
+        # Simplified example, actual implementation would require more data
+        return 30
+
+    def _calculate_difficulty(self, meal_item: str) -> str:
+        # Simplified example, actual implementation would require more data
+        return "Easy"
+
+    def _identify_muscle_groups(self, exercise: str) -> List[str]:
+        # Simplified example, actual implementation would require more data
+        return ["Chest", "Triceps"]
+
+    def _get_required_equipment(self, exercise: str) -> List[str]:
+        # Simplified example, actual implementation would require more data
+        return ["Barbell", "Bench"]
+
+    def _calculate_exercise_difficulty(self, exercise: str) -> str:
+        # Simplified example, actual implementation would require more data
+        return "Moderate"
+
+    def _get_exercise_tutorial(self, exercise: str) -> str:
+        # Simplified example, actual implementation would require more data
+        return "https://example.com/exercise-tutorial"
