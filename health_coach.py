@@ -115,14 +115,16 @@ The response must be a valid JSON object that can be parsed directly."""
 IMPORTANT: 
 1. You must ONLY return a valid JSON object. Do not include ANY explanatory text.
 2. Your entire response must be parseable as JSON.
-3. Include meals for ALL 7 days of the week.
-4. Each meal must include all required fields (item, portion, nutrients, etc.).
-5. Include detailed nutritional information for each meal.
-6. DO NOT use [...] or placeholder values."""
+3. You MUST include ALL 7 days of the week in the 'meals' object: monday, tuesday, wednesday, thursday, friday, saturday, and sunday.
+4. Each day MUST have at least 5 meals (3 main meals + 2 snacks).
+5. Each meal must include all required fields (item, portion, nutrients, etc.).
+6. Include detailed nutritional information for each meal.
+7. DO NOT use [...] or placeholder values.
+8. DO NOT skip any days - all seven days are required."""
                     },
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=4000,
+                max_tokens=5000,
                 temperature=0.7,
                 timeout=30
             )

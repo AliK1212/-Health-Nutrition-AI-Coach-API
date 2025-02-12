@@ -38,8 +38,18 @@ class MealPlan(BaseModel):
     @validator('meals')
     def validate_meals(cls, v):
         valid_days = {'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'}
-        if not all(day.lower() in valid_days for day in v.keys()):
-            raise ValueError("Invalid day in meal plan")
+        provided_days = {day.lower() for day in v.keys()}
+        
+        # Check if any invalid days were provided
+        if not provided_days.issubset(valid_days):
+            invalid_days = provided_days - valid_days
+            raise ValueError(f"Invalid days in meal plan: {', '.join(invalid_days)}")
+            
+        # Check if all required days are present
+        missing_days = valid_days - provided_days
+        if missing_days:
+            raise ValueError(f"Meal plan is missing the following days: {', '.join(missing_days)}")
+            
         return v
 
 class Exercise(BaseModel):
