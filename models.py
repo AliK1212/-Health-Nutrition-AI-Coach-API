@@ -76,7 +76,7 @@ class HealthInput(BaseModel):
     height: float = Field(..., gt=0, le=300)
     goals: List[str] = Field(..., min_items=1)
     dietary_restrictions: Optional[List[str]] = []
-    activity_level: str = Field(..., pattern="^(sedentary|light|moderate|very_active|extra_active)$")
+    activity_level: str = Field(..., pattern="^(light|moderate|active|very_active)$")
     meal_preferences: Optional[List[str]] = []
 
     @validator('goals')
